@@ -58,12 +58,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-RAPIDAPI_SECRET = os.getenv("RAPIDAPI_PROXY_SECRET", "your_rapidapi_secret_here")
-
-def verify_rapidapi_request(x_rapidapi_proxy_secret: str = Header(None)):
-    if x_rapidapi_proxy_secret != RAPIDAPI_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden: Invalid RapidAPI Secret")
-    return True
+# RapidAPI Secret tekshiruvi bekor qilindi
 
 class DownloadResponse(BaseModel):
     title: str
@@ -151,7 +146,7 @@ def search_and_get_audio_url(search_query: str):
             print(f"yt-dlp error: {e}")
             return None
 
-@app.get("/download", dependencies=[Depends(verify_rapidapi_request)], response_model=DownloadResponse)
+@app.get("/download", response_model=DownloadResponse)
 def download_music(url: str):
     if not url.startswith("http"):
         raise HTTPException(status_code=400, detail="Invalid URL format. Please provide a valid Yandex, Spotify, or Apple Music link.")
