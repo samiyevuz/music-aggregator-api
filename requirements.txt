@@ -4,3 +4,7 @@ httpx
 python-dotenv
 fake-useragent
 cachetools
+requests
+yt-dlp
+beautifulsoup4
+lxml
