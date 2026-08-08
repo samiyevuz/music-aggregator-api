@@ -154,19 +154,19 @@ def search_and_get_audio_url(search_query: str):
 @app.get("/download", dependencies=[Depends(verify_rapidapi_request)], response_model=DownloadResponse)
 def download_music(url: str):
     if not url.startswith("http"):
-        raise HTTPException(status_code=400, detail="Invalid URL format")
+        raise HTTPException(status_code=400, detail="Invalid URL format. Please provide a valid Yandex, Spotify, or Apple Music link.")
 
     # 1. Havoladan qo'shiq nomini aniqlash
     scraped_name = scrape_title_from_url(url)
     
     if not scraped_name:
-        raise HTTPException(status_code=404, detail="Qo'shiq nomini aniqlab bo'lmadi. Havola noto'g'ri bo'lishi mumkin.")
+        raise HTTPException(status_code=404, detail="Could not extract song name from URL. The link might be invalid or unsupported.")
     
     # 2. YouTube'dan 100% to'liq audioni qidirish va olish
     audio_data = search_and_get_audio_url(scraped_name)
     
     if not audio_data or not audio_data["download_url"]:
-        raise HTTPException(status_code=404, detail=f"To'liq audio fayl topilmadi. Qidiruv so'zi: {scraped_name}")
+        raise HTTPException(status_code=404, detail=f"Could not extract full audio file. Search query: {scraped_name}")
         
     return DownloadResponse(**audio_data)
 
