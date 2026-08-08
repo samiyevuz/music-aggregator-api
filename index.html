@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Downloader API - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #10b981;
+            --secondary: #3b82f6;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+            margin: 0 auto 3rem auto;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        button {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            color: white;
+            padding: 0 2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .result-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            margin-top: 2rem;
+        }
+
+        .cover {
+            width: 250px;
+            height: 250px;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        .info {
+            flex: 1;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .artist {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin: 0 0 2rem 0;
+        }
+
+        audio {
+            width: 100%;
+            height: 50px;
+            border-radius: 25px;
+            margin-bottom: 1.5rem;
+        }
+
+        audio::-webkit-media-controls-panel {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: background 0.2s;
+            text-align: center;
+        }
+
+        .download-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .error-msg {
+            text-align: center;
+            color: #ef4444;
+            padding: 2rem;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 20px;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 600px) {
+            .result-card {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>URL Music Downloader</h1>
+            <p class="subtitle">Paste a Yandex, Spotify or Apple Music link to get the FULL audio</p>
+        </header>
+
+        <div class="search-box">
+            <input type="text" id="urlInput" placeholder="https://music.yandex.uz/album/.../track/..." onkeypress="handleKeyPress(event)">
+            <button onclick="downloadMusic()">Download</button>
+        </div>
+
+        <div class="loader" id="loader">
+            <div class="loader-spinner"></div>
+            <p style="color: #94a3b8; margin-top: 1rem;">Extracting 100% Full Audio (This might take a few seconds)...</p>
+        </div>
+
+        <div id="resultsContainer">
+            <!-- Results will be injected here -->
+        </div>
+    </div>
+
+    <script>
+        const RAPIDAPI_SECRET = "your_rapidapi_secret_here";
+        
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                downloadMusic();
+            }
+        }
+
+        async function downloadMusic() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return;
+
+            const container = document.getElementById('resultsContainer');
+            const loader = document.getElementById('loader');
+
+            container.innerHTML = '';
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch(`/download?url=${encodeURIComponent(url)}`, {
+                    headers: {
+                        'x-rapidapi-proxy-secret': RAPIDAPI_SECRET
+                    }
+                });
+
+                const data = await response.json();
+                loader.style.display = 'none';
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'API request failed');
+                }
+                
+                renderResult(data);
+            } catch (error) {
+                loader.style.display = 'none';
+                container.innerHTML = `<div class="error-msg">Error: ${error.message}</div>`;
+            }
+        }
+
+        function renderResult(song) {
+            const container = document.getElementById('resultsContainer');
+            
+            const coverUrl = song.thumbnail || 'https://via.placeholder.com/300x300/1e293b/94a3b8?text=No+Cover';
+            
+            const html = `
+                <div class="result-card">
+                    <img src="${coverUrl}" alt="Album Cover" class="cover" onerror="this.src='https://via.placeholder.com/300x300/1e293b/94a3b8?text=Error'">
+                    <div class="info">
+                        <h3 class="title">${song.title}</h3>
+                        <p class="artist">${song.artist}</p>
+                        
+                        <audio controls src="${song.download_url}"></audio>
+                        
+                        <a href="${song.download_url}" target="_blank" class="download-btn">
+                            ⬇️ Direct Download Link
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

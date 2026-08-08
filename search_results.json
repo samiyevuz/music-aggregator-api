@@ -1,0 +1,86 @@
+﻿{
+    "query":  "Eminem",
+    "total_results":  10,
+    "data":  [
+                 {
+                     "platform":  "Apple/iTunes",
+                     "id":  "1440821643",
+                     "title":  "Without Me",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/dd/5c/e6/dd5ce621-f7d2-f767-7a08-e7a7eaa7870b/00602537526994.rgb.jpg/300x300bb.jpg",
+                     "preview_url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/7d/38/ff/7d38ff16-b52c-063a-a34d-767e836befcc/mzaf_13413071545825673354.plus.aac.p.m4a"
+                 },
+                 {
+                     "platform":  "Apple/iTunes",
+                     "id":  "1440903439",
+                     "title":  "Lose Yourself",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/08/23/fc/0823fcd9-cb44-695b-32bf-b3bf51d9f800/00606949351229.rgb.jpg/300x300bb.jpg",
+                     "preview_url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/62/0a/a5/620aa56f-189e-708a-80f0-cebdada3872e/mzaf_7131619873177773332.plus.aac.p.m4a"
+                 },
+                 {
+                     "platform":  "Apple/iTunes",
+                     "id":  "1440864098",
+                     "title":  "Rap God",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/50/a2/d5/50a2d5a8-8ba5-c8a0-421c-70635bf9e80d/00602537542710.rgb.jpg/300x300bb.jpg",
+                     "preview_url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/b8/c5/f1/b8c5f1e1-8637-ddd7-f95f-8241e1123fc1/mzaf_16651059254294397169.plus.aac.p.m4a"
+                 },
+                 {
+                     "platform":  "Apple/iTunes",
+                     "id":  "1495269629",
+                     "title":  "Godzilla (feat. Juice WRLD)",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/c6/3f/7a/c63f7a28-4e53-1ae2-cfae-5d211e0c256c/20UMGIM02955.rgb.jpg/300x300bb.jpg",
+                     "preview_url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/94/c0/1e/94c01e57-e670-3ef0-7928-816c80b8425e/mzaf_554535386096240021.plus.aac.p.m4a"
+                 },
+                 {
+                     "platform":  "Apple/iTunes",
+                     "id":  "1698162327",
+                     "title":  "Eminem",
+                     "artist":  "Joeyy",
+                     "album_cover":  "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/11/60/29/11602913-9773-8ccd-30ac-1f6af60a0126/cover_735910926903.jpg/300x300bb.jpg",
+                     "preview_url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview126/v4/9f/c7/a0/9fc7a044-b52d-4047-7289-8a641ba26929/mzaf_8971685788116095375.plus.aac.p.m4a"
+                 },
+                 {
+                     "platform":  "Deezer",
+                     "id":  "916424",
+                     "title":  "Without Me",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://cdn-images.dzcdn.net/images/cover/ec3c8ed67427064c70f67e5815b74cef/1000x1000-000000-80-0-0.jpg",
+                     "preview_url":  "https://cdnt-preview.dzcdn.net/api/1/1/a/e/b/0/aeb58f2f63ee57fb9c47cbe8fb5ccdaa.mp3?hdnea=exp=1786186223~acl=/api/1/1/a/e/b/0/aeb58f2f63ee57fb9c47cbe8fb5ccdaa.mp3*~data=user_id=0,application_id=42~hmac=af11dde11dafac4ba1590fbdf232cc43a8fbcfa9557d7ffb362e8f8a9af5b1b0"
+                 },
+                 {
+                     "platform":  "Deezer",
+                     "id":  "6461440",
+                     "title":  "Love The Way You Lie",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://cdn-images.dzcdn.net/images/cover/be682506145061814eddee648edb7c59/1000x1000-000000-80-0-0.jpg",
+                     "preview_url":  "https://cdnt-preview.dzcdn.net/api/1/1/c/8/9/0/c89ba14b5d142a98e3ad48036b05d10d.mp3?hdnea=exp=1786186223~acl=/api/1/1/c/8/9/0/c89ba14b5d142a98e3ad48036b05d10d.mp3*~data=user_id=0,application_id=42~hmac=ce938434bc40ed82c4e27ab23336741819d86e4a36a5e1ebd914cc8a4f4d814d"
+                 },
+                 {
+                     "platform":  "Deezer",
+                     "id":  "916445",
+                     "title":  "Till I Collapse",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://cdn-images.dzcdn.net/images/cover/ec3c8ed67427064c70f67e5815b74cef/1000x1000-000000-80-0-0.jpg",
+                     "preview_url":  "https://cdnt-preview.dzcdn.net/api/1/1/8/4/6/0/846995adc7246b0d3a90d6c3281a298a.mp3?hdnea=exp=1786186223~acl=/api/1/1/8/4/6/0/846995adc7246b0d3a90d6c3281a298a.mp3*~data=user_id=0,application_id=42~hmac=3cfa08e20a0ef76cc3dfffa7cc240368799f0a2a3624737e6b9c4f3ae954d402"
+                 },
+                 {
+                     "platform":  "Deezer",
+                     "id":  "72160317",
+                     "title":  "The Monster",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://cdn-images.dzcdn.net/images/cover/b6938db3addc3ccd9575d6d12220e466/1000x1000-000000-80-0-0.jpg",
+                     "preview_url":  "https://cdnt-preview.dzcdn.net/api/1/1/9/0/0/0/900393147281069933013563cea5817b.mp3?hdnea=exp=1786186223~acl=/api/1/1/9/0/0/0/900393147281069933013563cea5817b.mp3*~data=user_id=0,application_id=42~hmac=da013356f0a99a14c63692ff394ea494a47b19bdbb492bbbd159ceeee10dd69e"
+                 },
+                 {
+                     "platform":  "Deezer",
+                     "id":  "1109731",
+                     "title":  "Lose Yourself",
+                     "artist":  "Eminem",
+                     "album_cover":  "https://cdn-images.dzcdn.net/images/cover/e2b36a9fda865cb2e9ed1476b6291a7d/1000x1000-000000-80-0-0.jpg",
+                     "preview_url":  "https://cdnt-preview.dzcdn.net/api/1/1/2/7/a/0/27a14827ff1e82c5e40e8b6a934a8637.mp3?hdnea=exp=1786186223~acl=/api/1/1/2/7/a/0/27a14827ff1e82c5e40e8b6a934a8637.mp3*~data=user_id=0,application_id=42~hmac=f567b2cc3195c7b0f2e0c0f145e919c17cf833ade25779316b9dc1b96afb788f"
+                 }
+             ]
+}
