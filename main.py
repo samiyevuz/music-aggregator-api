@@ -92,6 +92,7 @@ def scrape_title_from_url(url: str) -> str:
         title = re.sub(r'—\s*Yandex Music.*', '', title, flags=re.IGNORECASE)
         title = re.sub(r'-\s*Yandex Music.*', '', title, flags=re.IGNORECASE)
         title = re.sub(r'Yandex Music ilovasida.*', '', title, flags=re.IGNORECASE)
+        title = re.sub(r'Listen online on Yandex Music.*', '', title, flags=re.IGNORECASE)
         title = re.sub(r'Слушать онлайн на Яндекс.*', '', title, flags=re.IGNORECASE)
         
         # 2. Apple Music 
