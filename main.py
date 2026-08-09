@@ -1,8 +1,8 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException, Header, Depends
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Header, Depends, Request
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import yt_dlp
@@ -16,6 +16,19 @@ from urllib3.util.retry import Retry
 load_dotenv()
 
 app = FastAPI(title="Music Downloader API", description="URL orqali to'liq qo'shiq yuklash API")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"Global Exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": str(exc),
+            "recommendation": "The third-party service might be temporarily unavailable. Please try again later or check the URL.",
+            "request_url": str(request.url)
+        }
+    )
 
 # --- Anti-ban & Rate-Limit Configs ---
 # UserAgent generator
