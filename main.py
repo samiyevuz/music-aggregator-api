@@ -48,8 +48,9 @@ def get_session():
     return session
 
 # TTLCache: Kesh 1 soat (3600 soniya) yashaydi, max 1000 ta ob'yekt
+# url_cache: Yandex/Spotify sahifasini qayta so'ramaydi (1 soat)
 url_cache = TTLCache(maxsize=1000, ttl=3600)
-audio_cache = TTLCache(maxsize=1000, ttl=3600)
+# audio_cache OLIB TASHLANDI: YouTube URL lari muddati o'tadi, har safar yangi URL olish kerak
 
 app.add_middleware(
     CORSMiddleware,
@@ -112,7 +113,6 @@ def scrape_title_from_url(url: str) -> str:
         print(f"Scrape Error: {e}")
         return ""
 
-@cached(cache=audio_cache)
 def search_and_get_audio_url(search_query: str):
     ydl_opts = {
         'format': 'bestaudio/best',
