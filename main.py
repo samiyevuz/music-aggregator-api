@@ -93,8 +93,6 @@ YANDEX_JUNK_PATTERNS = [
     r'реклам',
     r'промо',
     r'раскрутк',
-    r'собираем музыку для вас',
-    r'Яндекс Музыка —(?!.*[-–])',
 ]
 JUNK_RE = re.compile('|'.join(YANDEX_JUNK_PATTERNS), re.IGNORECASE)
 
@@ -105,10 +103,33 @@ def _is_junk_title(title: str) -> bool:
     return bool(JUNK_RE.search(title))
 
 def _extract_yandex_title_from_html(html_content: bytes) -> str:
-    """Yandex Music sahifasidan title ni chiqarib olish — og:title va meta teglardan"""
+    """Yandex Music sahifasidan title ni chiqarib olish — ld+json, og:title va meta teglardan"""
     soup = BeautifulSoup(html_content, 'html.parser')
     
-    # 1. og:title — eng ishonchli manba
+    # 0. ld+json - Eng aniq metadata
+    import json
+    ld_json = soup.find('script', type='application/ld+json')
+    if ld_json and ld_json.string:
+        try:
+            data = json.loads(ld_json.string)
+            if isinstance(data, list):
+                data = data[0]
+            if data.get('@type') == 'MusicRecording':
+                title = data.get('name', '')
+                artist_data = data.get('byArtist', {})
+                # artist_data list yoki dict bo'lishi mumkin
+                if isinstance(artist_data, list):
+                    artists = " ".join([a.get('name', '') for a in artist_data])
+                else:
+                    artists = artist_data.get('name', '')
+                if title and artists:
+                    return f"{title} {artists}".strip()
+                elif title:
+                    return title.strip()
+        except Exception as e:
+            print(f"JSON-LD error: {e}")
+
+    # 1. og:title
     og = soup.find('meta', property='og:title')
     if og and og.get('content'):
         return og['content'].strip()
@@ -123,16 +144,7 @@ def _extract_yandex_title_from_html(html_content: bytes) -> str:
 def scrape_title_from_url(url: str) -> str:
     try:
         is_yandex = 'yandex' in url.lower()
-        
-        # YANDEX: Avval API orqali (proxysiz, tez ~1-2s). Scrape faqat fallback.
-        if is_yandex:
-            api_title = _extract_from_url_path(url)
-            if api_title and not _is_junk_title(api_title):
-                print(f"Yandex API success: '{api_title}'")
-                return api_title
-            print(f"Yandex API failed, falling back to scrape...")
-        
-        # Spotify/Apple: proxysiz to'g'ridan-to'g'ri. Yandex: proxy bilan scrape (fallback).
+        # Proxy faqat Yandex uchun kerak (SmartCaptcha), Spotify/Apple to'g'ridan-to'g'ri ishlaydi
         session = get_session(use_proxy=is_yandex)
         headers = {
             'User-Agent': ua.random,
@@ -150,11 +162,22 @@ def scrape_title_from_url(url: str) -> str:
         
         if not title: return ""
         
-        # Yandex uchun: agar reklama/junk kontent bo'lsa — bo'sh qaytarish
+        # Yandex uchun: agar reklama/junk kontent bo'lsa, keshdan o'chirib, proxyni yangilab qayta urinish
         if is_yandex and _is_junk_title(title):
-            print(f"JUNK detected from Yandex scrape: '{title}'")
+            print(f"JUNK detected from Yandex: '{title}', retrying with new proxy...")
             url_cache.pop(url, None)
-            return ""
+            
+            session2 = get_session()
+            headers['User-Agent'] = ua.random
+            res2 = session2.get(url, headers=headers, timeout=10)
+            res2.raise_for_status()
+            title = _extract_yandex_title_from_html(res2.content)
+            
+            if not title or _is_junk_title(title):
+                print(f"JUNK still detected after retry: '{title}'")
+                title = _extract_from_url_path(url)
+                if not title:
+                    return ""
         
         # Remove common zero-width or formatting chars
         title = title.replace('\u200e', '').replace('\xa0', ' ')
@@ -191,24 +214,18 @@ def _extract_from_url_path(url: str) -> str:
         return ""
     album_id, track_id = m.group(1), m.group(2)
     try:
-        # api.music.yandex.net — proxy orqali (geo-bloklangan, 451 qaytaradi proxysiz)
-        api_url = f"https://api.music.yandex.net/tracks/{track_id}"
-        session = get_session(use_proxy=True)
+        api_url = f"https://music.yandex.ru/handlers/track.jsx?track={track_id}:{album_id}"
         headers = {'User-Agent': ua.random, 'Accept': 'application/json'}
-        r = session.get(api_url, headers=headers, timeout=8)
-        print(f"Yandex API response: {r.status_code}")
+        r = requests.get(api_url, headers=headers, timeout=8)
         if r.status_code == 200:
             data = r.json()
-            # api.music.yandex.net qaytaradigan format: {"result": [{"title": "...", "artists": [...]}]}
-            results = data.get('result', data)
-            track = results[0] if isinstance(results, list) and results else results
-            if isinstance(track, dict):
-                title = track.get('title', '')
-                artists = ', '.join([a.get('name', '') for a in track.get('artists', [])])
-                if title and artists:
-                    return f"{title} {artists}"
-                elif title:
-                    return title
+            track = data.get('track', {})
+            title = track.get('title', '')
+            artists = ', '.join([a.get('name', '') for a in track.get('artists', [])])
+            if title and artists:
+                return f"{title} {artists}"
+            elif title:
+                return title
     except Exception as e:
         print(f"Yandex API fallback error: {e}")
     return ""
@@ -226,43 +243,31 @@ def search_and_get_audio_url(search_query: str):
         'extract_flat': False,
         'geo_bypass': True,
         'nocheckcertificate': True,
-        'no_check_formats': True,
+        'no_check_formats': True,  # Format tekshirishni o'tkazib yuborish — tezroq
         'socket_timeout': 8,
-        'proxy': get_random_proxy(),
+        'proxy': get_random_proxy(),  # YouTube server IP ni bloklaydi — proxy shart
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
-            # 3 ta natija olamiz va eng mosini tanlaymiz (tutorial/spam filtrlash uchun)
-            info = ydl.extract_info(f"ytsearch3:{search_query} official audio", download=False)
+            # 5 ta natija olib, eng birinchi 30 soniyadan uzog'ini tanlaymiz
+            info = ydl.extract_info(f"ytsearch5:{search_query}", download=False)
             if 'entries' in info and len(info['entries']) > 0:
-                # Tutorial/qisqa videolarni filtrlash: davomiyligi 60s dan kam bo'lsa, o'tkazib yuboramiz
-                best = None
                 for entry in info['entries']:
-                    dur = entry.get("duration", 0) or 0
-                    title_lower = (entry.get("title", "") or "").lower()
-                    # Tutorial, fix, how to videolarni o'tkazib yuborish
-                    skip_words = ["how to", "fix", "tutorial", "not working", "problem", "issue", "решение", "ошибка"]
-                    if any(w in title_lower for w in skip_words):
-                        continue
-                    if dur >= 60:
-                        best = entry
-                        break
-                
-                # Agar filtrdan hech biri o'tmasa, birinchisini olish
-                if not best:
-                    best = info['entries'][0]
-                
-                result = {
-                    "title": best.get("title", "Unknown"),
-                    "artist": best.get("uploader", "Unknown"),
-                    "download_url": best.get("url", ""),
-                    "thumbnail": best.get("thumbnail", ""),
-                    "duration": best.get("duration", 0)
-                }
-                # Keshga saqlash (5 daqiqa)
-                audio_cache[search_query] = result
-                return result
+                    duration = entry.get("duration", 0)
+                    if duration and duration < 30:
+                        continue  # 30 soniyadan qisqa reklama bo'lishi mumkin
+                    
+                    result = {
+                        "title": entry.get("title", "Unknown"),
+                        "artist": entry.get("uploader", "Unknown"),
+                        "download_url": entry.get("url", ""),
+                        "thumbnail": entry.get("thumbnail", ""),
+                        "duration": duration
+                    }
+                    # Keshga saqlash (5 daqiqa)
+                    audio_cache[search_query] = result
+                    return result
             return None
         except Exception as e:
             print(f"yt-dlp error: {e}")
