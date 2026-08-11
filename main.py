@@ -44,15 +44,15 @@ def get_random_proxy():
     return proxy
 
 # Session with fast retry for requests
-def get_session():
+def get_session(use_proxy=True):
     session = requests.Session()
     retries = Retry(total=2, backoff_factor=0.3, status_forcelist=[429, 500, 502, 503, 504])
     adapter = HTTPAdapter(max_retries=retries)
     session.mount('http://', adapter)
     session.mount('https://', adapter)
     
-    proxy = get_random_proxy()
-    if proxy:
+    if use_proxy:
+        proxy = get_random_proxy()
         session.proxies = {
             'http': proxy,
             'https': proxy
@@ -61,9 +61,9 @@ def get_session():
     return session
 
 # TTLCache: Kesh 1 soat (3600 soniya) yashaydi, max 1000 ta ob'yekt
-# url_cache: Yandex/Spotify sahifasini qayta so'ramaydi (1 soat)
 url_cache = TTLCache(maxsize=1000, ttl=3600)
-# audio_cache OLIB TASHLANDI: YouTube URL lari muddati o'tadi, har safar yangi URL olish kerak
+# audio_cache: Qisqa muddatli (5 daqiqa) — takroriy so'rovlar uchun tezkor javob
+audio_cache = TTLCache(maxsize=500, ttl=300)
 
 app.add_middleware(
     CORSMiddleware,
@@ -120,7 +120,9 @@ def _extract_yandex_title_from_html(html_content: bytes) -> str:
 @cached(cache=url_cache)
 def scrape_title_from_url(url: str) -> str:
     try:
-        session = get_session()
+        is_yandex = 'yandex' in url.lower()
+        # Proxy faqat Yandex uchun kerak (SmartCaptcha), Spotify/Apple to'g'ridan-to'g'ri ishlaydi
+        session = get_session(use_proxy=is_yandex)
         headers = {
             'User-Agent': ua.random,
             'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
@@ -128,8 +130,6 @@ def scrape_title_from_url(url: str) -> str:
         }
         res = session.get(url, headers=headers, timeout=10)
         res.raise_for_status()
-        
-        is_yandex = 'yandex' in url.lower() or 'music.yandex' in url.lower()
         
         if is_yandex:
             title = _extract_yandex_title_from_html(res.content)
@@ -211,6 +211,10 @@ def _extract_from_url_path(url: str) -> str:
     return ""
 
 def search_and_get_audio_url(search_query: str):
+    # Keshda bor bo'lsa, darhol qaytarish (5 daqiqa ichida)
+    if search_query in audio_cache:
+        return audio_cache[search_query]
+    
     ydl_opts = {
         'format': 'bestaudio/best',
         'quiet': True,
@@ -219,26 +223,26 @@ def search_and_get_audio_url(search_query: str):
         'extract_flat': False,
         'geo_bypass': True,
         'nocheckcertificate': True,
-        # sleep_interval o'chirildi — tezlikni oshirish uchun
-        'socket_timeout': 10,
+        'no_check_formats': True,  # Format tekshirishni o'tkazib yuborish — tezroq
+        'socket_timeout': 8,
     }
-    
-    proxy = get_random_proxy()
-    if proxy:
-        ydl_opts['proxy'] = proxy
+    # YouTube uchun proxy ISHLATILMAYDI — to'g'ridan-to'g'ri ulanish 3-5x tezroq
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
             if 'entries' in info and len(info['entries']) > 0:
                 entry = info['entries'][0]
-                return {
+                result = {
                     "title": entry.get("title", "Unknown"),
                     "artist": entry.get("uploader", "Unknown"),
                     "download_url": entry.get("url", ""),
                     "thumbnail": entry.get("thumbnail", ""),
                     "duration": entry.get("duration", 0)
                 }
+                # Keshga saqlash (5 daqiqa)
+                audio_cache[search_query] = result
+                return result
             return None
         except Exception as e:
             print(f"yt-dlp error: {e}")
