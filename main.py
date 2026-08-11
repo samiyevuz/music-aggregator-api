@@ -43,10 +43,10 @@ def get_random_proxy():
     proxy = f"http://REeRXlovbZw8qA9:rB32ciO4SfzVl6Z_session-{session_id}_ttl-15@thehub.proxy-cheap.com:8080"
     return proxy
 
-# Session with exponential backoff for requests
+# Session with fast retry for requests
 def get_session():
     session = requests.Session()
-    retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+    retries = Retry(total=2, backoff_factor=0.3, status_forcelist=[429, 500, 502, 503, 504])
     adapter = HTTPAdapter(max_retries=retries)
     session.mount('http://', adapter)
     session.mount('https://', adapter)
@@ -81,23 +81,83 @@ class DownloadResponse(BaseModel):
     thumbnail: str
     duration: int
 
+# --- Yandex Music reklama/xato kontentni aniqlash ---
+YANDEX_JUNK_PATTERNS = [
+    r'продвижение',
+    r'как попасть',
+    r'набрать прослушивания',
+    r'подписчик',
+    r'smm',
+    r'монетизация',
+    r'маркетинг',
+    r'реклам',
+    r'промо',
+    r'раскрутк',
+]
+JUNK_RE = re.compile('|'.join(YANDEX_JUNK_PATTERNS), re.IGNORECASE)
+
+def _is_junk_title(title: str) -> bool:
+    """Yandex proxy orqali olingan reklama/promo sahifalarini aniqlash"""
+    if not title:
+        return True
+    return bool(JUNK_RE.search(title))
+
+def _extract_yandex_title_from_html(html_content: bytes) -> str:
+    """Yandex Music sahifasidan title ni chiqarib olish — og:title va meta teglardan"""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # 1. og:title — eng ishonchli manba
+    og = soup.find('meta', property='og:title')
+    if og and og.get('content'):
+        return og['content'].strip()
+    
+    # 2. <title> tegi
+    if soup.title and soup.title.text:
+        return soup.title.text.strip()
+    
+    return ""
+
 @cached(cache=url_cache)
 def scrape_title_from_url(url: str) -> str:
     try:
         session = get_session()
         headers = {
             'User-Agent': ua.random,
-            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         }
-        res = session.get(url, headers=headers, timeout=15)
+        res = session.get(url, headers=headers, timeout=10)
         res.raise_for_status()
         
-        # Use res.content to let BeautifulSoup auto-detect encoding from meta tags
-        soup = BeautifulSoup(res.content, 'html.parser')
-        title = soup.title.text if soup.title else ""
+        is_yandex = 'yandex' in url.lower() or 'music.yandex' in url.lower()
+        
+        if is_yandex:
+            title = _extract_yandex_title_from_html(res.content)
+        else:
+            soup = BeautifulSoup(res.content, 'html.parser')
+            title = soup.title.text if soup.title else ""
         
         if not title: return ""
+        
+        # Yandex uchun: agar reklama/junk kontent bo'lsa, keshdan o'chirib, proxyni yangilab qayta urinish
+        if is_yandex and _is_junk_title(title):
+            print(f"JUNK detected from Yandex: '{title}', retrying with new proxy...")
+            # Keshdan bu natijani o'chiramiz
+            url_cache.pop(url, None)
+            
+            # Yangi proxy bilan qayta urinish (1 marta)
+            session2 = get_session()
+            headers['User-Agent'] = ua.random
+            res2 = session2.get(url, headers=headers, timeout=10)
+            res2.raise_for_status()
+            title = _extract_yandex_title_from_html(res2.content)
+            
+            if not title or _is_junk_title(title):
+                print(f"JUNK still detected after retry: '{title}'")
+                # URL dan qo'shiq nomini regex orqali ajratib olishga harakat qilamiz
+                title = _extract_from_url_path(url)
+                if not title:
+                    return ""
         
         # Remove common zero-width or formatting chars
         title = title.replace('\u200e', '').replace('\xa0', ' ')
@@ -126,6 +186,30 @@ def scrape_title_from_url(url: str) -> str:
         print(f"Scrape Error: {e}")
         return ""
 
+def _extract_from_url_path(url: str) -> str:
+    """URL yo'lidan track/album ID orqali Yandex Music API dan metadata olishga harakat"""
+    # Yandex URL: music.yandex.uz/album/ALBUM_ID/track/TRACK_ID
+    m = re.search(r'album/(\d+)/track/(\d+)', url)
+    if not m:
+        return ""
+    album_id, track_id = m.group(1), m.group(2)
+    try:
+        api_url = f"https://music.yandex.ru/handlers/track.jsx?track={track_id}:{album_id}"
+        headers = {'User-Agent': ua.random, 'Accept': 'application/json'}
+        r = requests.get(api_url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            data = r.json()
+            track = data.get('track', {})
+            title = track.get('title', '')
+            artists = ', '.join([a.get('name', '') for a in track.get('artists', [])])
+            if title and artists:
+                return f"{title} {artists}"
+            elif title:
+                return title
+    except Exception as e:
+        print(f"Yandex API fallback error: {e}")
+    return ""
+
 def search_and_get_audio_url(search_query: str):
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -135,8 +219,8 @@ def search_and_get_audio_url(search_query: str):
         'extract_flat': False,
         'geo_bypass': True,
         'nocheckcertificate': True,
-        'sleep_interval_requests': 1,
-        'max_sleep_interval': 3,
+        # sleep_interval o'chirildi — tezlikni oshirish uchun
+        'socket_timeout': 10,
     }
     
     proxy = get_random_proxy()
@@ -145,7 +229,7 @@ def search_and_get_audio_url(search_query: str):
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
-            info = ydl.extract_info(f"ytsearch1:{search_query} audio", download=False)
+            info = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
             if 'entries' in info and len(info['entries']) > 0:
                 entry = info['entries'][0]
                 return {
