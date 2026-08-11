@@ -12,10 +12,8 @@ from fake_useragent import UserAgent
 from cachetools import TTLCache, cached
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from yandex_music import Client
 
 load_dotenv()
-yandex_client = Client().init()
 
 app = FastAPI(title="Music Downloader API", description="URL orqali to'liq qo'shiq yuklash API")
 
@@ -239,36 +237,6 @@ def _extract_from_url_path(url: str) -> str:
             elif title:
                 return title
     except Exception as e:
-        print(f"Yandex API fallback error: {e}")
-    return ""
-
-def _get_yandex_native_audio(url: str):
-    """Yandex Music SDK orqali to'g'ridan-to'g'ri MP3 URL oladi (YouTube aralashuvisiz)"""
-    m = re.search(r'album/(\d+)/track/(\d+)', url)
-    if not m:
-        return None
-    album_id, track_id = m.group(1), m.group(2)
-    try:
-        track = yandex_client.tracks(f"{track_id}:{album_id}")[0]
-        info = track.get_download_info(get_direct_links=True)
-        if not info:
-            return None
-            
-        # Eng yuqori sifatli faylni (bitrate bo'yicha) tanlash
-        best_info = max(info, key=lambda x: x.bitrate_in_kbps)
-        
-        artists = ", ".join([a.name for a in track.artists])
-        return {
-            "title": track.title,
-            "artist": artists,
-            "download_url": best_info.direct_link,
-            "thumbnail": f"https://{track.cover_uri.replace('%%', '400x400')}" if track.cover_uri else "",
-            "duration": int(track.duration_ms / 1000) if track.duration_ms else 0
-        }
-    except Exception as e:
-        print(f"Yandex native error: {e}")
-        return None
-
 def search_and_get_audio_url(search_query: str):
     # Keshda bor bo'lsa, darhol qaytarish (5 daqiqa ichida)
     if search_query in audio_cache:
@@ -318,17 +286,7 @@ def download_music(url: str):
     if not url.startswith("http"):
         raise HTTPException(status_code=400, detail="Invalid URL format. Please provide a valid Yandex, Spotify, or Apple Music link.")
 
-    # Native Yandex Support (To'g'ridan-to'g'ri Yandex serverlaridan)
-    if 'yandex' in url.lower():
-        audio_data = _get_yandex_native_audio(url)
-        if audio_data and audio_data.get("download_url"):
-            return DownloadResponse(**audio_data)
-        # Agar native ishlamasa, fallback sifatida eskicha usulga o'tishimiz mumkin, 
-        # lekin native deyarli har doim ishlaydi. 
-        # Yandex-Music SDK ishlamasa (masalan IP blok), u holda 404 beramiz
-        raise HTTPException(status_code=404, detail="Could not extract native audio from Yandex Music.")
-
-    # 1. Havoladan qo'shiq nomini aniqlash (Spotify, Apple uchun)
+    # 1. Havoladan qo'shiq nomini aniqlash
     scraped_name = scrape_title_from_url(url)
     
     if not scraped_name:
