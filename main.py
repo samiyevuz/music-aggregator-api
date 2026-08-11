@@ -220,22 +220,39 @@ def search_and_get_audio_url(search_query: str):
         'extract_flat': False,
         'geo_bypass': True,
         'nocheckcertificate': True,
-        'no_check_formats': True,  # Format tekshirishni o'tkazib yuborish — tezroq
+        'no_check_formats': True,
         'socket_timeout': 8,
-        'proxy': get_random_proxy(),  # YouTube server IP ni bloklaydi — proxy shart
+        'proxy': get_random_proxy(),
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
-            info = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
+            # 3 ta natija olamiz va eng mosini tanlaymiz (tutorial/spam filtrlash uchun)
+            info = ydl.extract_info(f"ytsearch3:{search_query} official audio", download=False)
             if 'entries' in info and len(info['entries']) > 0:
-                entry = info['entries'][0]
+                # Tutorial/qisqa videolarni filtrlash: davomiyligi 60s dan kam bo'lsa, o'tkazib yuboramiz
+                best = None
+                for entry in info['entries']:
+                    dur = entry.get("duration", 0) or 0
+                    title_lower = (entry.get("title", "") or "").lower()
+                    # Tutorial, fix, how to videolarni o'tkazib yuborish
+                    skip_words = ["how to", "fix", "tutorial", "not working", "problem", "issue", "решение", "ошибка"]
+                    if any(w in title_lower for w in skip_words):
+                        continue
+                    if dur >= 60:
+                        best = entry
+                        break
+                
+                # Agar filtrdan hech biri o'tmasa, birinchisini olish
+                if not best:
+                    best = info['entries'][0]
+                
                 result = {
-                    "title": entry.get("title", "Unknown"),
-                    "artist": entry.get("uploader", "Unknown"),
-                    "download_url": entry.get("url", ""),
-                    "thumbnail": entry.get("thumbnail", ""),
-                    "duration": entry.get("duration", 0)
+                    "title": best.get("title", "Unknown"),
+                    "artist": best.get("uploader", "Unknown"),
+                    "download_url": best.get("url", ""),
+                    "thumbnail": best.get("thumbnail", ""),
+                    "duration": best.get("duration", 0)
                 }
                 # Keshga saqlash (5 daqiqa)
                 audio_cache[search_query] = result
