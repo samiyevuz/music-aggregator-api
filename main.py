@@ -225,8 +225,8 @@ def search_and_get_audio_url(search_query: str):
         'nocheckcertificate': True,
         'no_check_formats': True,  # Format tekshirishni o'tkazib yuborish — tezroq
         'socket_timeout': 8,
+        'proxy': get_random_proxy(),  # YouTube server IP ni bloklaydi — proxy shart
     }
-    # YouTube uchun proxy ISHLATILMAYDI — to'g'ridan-to'g'ri ulanish 3-5x tezroq
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
