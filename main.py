@@ -191,18 +191,24 @@ def _extract_from_url_path(url: str) -> str:
         return ""
     album_id, track_id = m.group(1), m.group(2)
     try:
-        api_url = f"https://music.yandex.ru/handlers/track.jsx?track={track_id}:{album_id}"
+        # api.music.yandex.net — proxy orqali (geo-bloklangan, 451 qaytaradi proxysiz)
+        api_url = f"https://api.music.yandex.net/tracks/{track_id}"
+        session = get_session(use_proxy=True)
         headers = {'User-Agent': ua.random, 'Accept': 'application/json'}
-        r = requests.get(api_url, headers=headers, timeout=8)
+        r = session.get(api_url, headers=headers, timeout=8)
+        print(f"Yandex API response: {r.status_code}")
         if r.status_code == 200:
             data = r.json()
-            track = data.get('track', {})
-            title = track.get('title', '')
-            artists = ', '.join([a.get('name', '') for a in track.get('artists', [])])
-            if title and artists:
-                return f"{title} {artists}"
-            elif title:
-                return title
+            # api.music.yandex.net qaytaradigan format: {"result": [{"title": "...", "artists": [...]}]}
+            results = data.get('result', data)
+            track = results[0] if isinstance(results, list) and results else results
+            if isinstance(track, dict):
+                title = track.get('title', '')
+                artists = ', '.join([a.get('name', '') for a in track.get('artists', [])])
+                if title and artists:
+                    return f"{title} {artists}"
+                elif title:
+                    return title
     except Exception as e:
         print(f"Yandex API fallback error: {e}")
     return ""
