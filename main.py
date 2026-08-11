@@ -240,7 +240,7 @@ def _extract_from_url_path(url: str) -> str:
         print(f"Yandex API fallback error: {e}")
     return ""
 
-def search_and_get_audio_url(search_query: str):
+def search_and_get_audio_url(search_query: str, is_yandex: bool = False):
     # Keshda bor bo'lsa, darhol qaytarish (5 daqiqa ichida)
     if search_query in audio_cache:
         return audio_cache[search_query]
@@ -261,8 +261,8 @@ def search_and_get_audio_url(search_query: str):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             # Spotify/Apple uchun: "official audio" ni qo'shamiz va 2 ta natijadan qidiramiz (timeout oldini olish uchun)
-            search_query_refined = f"{search_query} official audio"
-            info = ydl.extract_info(f"ytsearch2:{search_query_refined}", download=False)
+            search_query_refined = search_query if is_yandex else f"{search_query} official audio"
+            info = ydl.extract_info(f"ytsearch3:{search_query_refined}", download=False)
             if 'entries' in info and len(info['entries']) > 0:
                 for entry in info['entries']:
                     duration = entry.get("duration", 0)
@@ -295,8 +295,10 @@ def download_music(url: str):
     if not scraped_name:
         raise HTTPException(status_code=404, detail="Could not extract song name from URL. The link might be invalid or unsupported.")
     
+    is_yandex = 'yandex' in url.lower()
+    
     # 2. YouTube'dan 100% to'liq audioni qidirish va olish (optimallashtirilgan qidiruv bilan)
-    audio_data = search_and_get_audio_url(scraped_name)
+    audio_data = search_and_get_audio_url(scraped_name, is_yandex=is_yandex)
     
     if not audio_data or not audio_data["download_url"]:
         raise HTTPException(status_code=404, detail=f"Could not extract full audio file. Search query: {scraped_name}")
