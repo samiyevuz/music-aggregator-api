@@ -93,6 +93,8 @@ YANDEX_JUNK_PATTERNS = [
     r'реклам',
     r'промо',
     r'раскрутк',
+    r'собираем музыку для вас',
+    r'Яндекс Музыка —(?!.*[-–])',
 ]
 JUNK_RE = re.compile('|'.join(YANDEX_JUNK_PATTERNS), re.IGNORECASE)
 
@@ -121,7 +123,16 @@ def _extract_yandex_title_from_html(html_content: bytes) -> str:
 def scrape_title_from_url(url: str) -> str:
     try:
         is_yandex = 'yandex' in url.lower()
-        # Proxy faqat Yandex uchun kerak (SmartCaptcha), Spotify/Apple to'g'ridan-to'g'ri ishlaydi
+        
+        # YANDEX: Avval API orqali (proxysiz, tez ~1-2s). Scrape faqat fallback.
+        if is_yandex:
+            api_title = _extract_from_url_path(url)
+            if api_title and not _is_junk_title(api_title):
+                print(f"Yandex API success: '{api_title}'")
+                return api_title
+            print(f"Yandex API failed, falling back to scrape...")
+        
+        # Spotify/Apple: proxysiz to'g'ridan-to'g'ri. Yandex: proxy bilan scrape (fallback).
         session = get_session(use_proxy=is_yandex)
         headers = {
             'User-Agent': ua.random,
@@ -139,25 +150,11 @@ def scrape_title_from_url(url: str) -> str:
         
         if not title: return ""
         
-        # Yandex uchun: agar reklama/junk kontent bo'lsa, keshdan o'chirib, proxyni yangilab qayta urinish
+        # Yandex uchun: agar reklama/junk kontent bo'lsa — bo'sh qaytarish
         if is_yandex and _is_junk_title(title):
-            print(f"JUNK detected from Yandex: '{title}', retrying with new proxy...")
-            # Keshdan bu natijani o'chiramiz
+            print(f"JUNK detected from Yandex scrape: '{title}'")
             url_cache.pop(url, None)
-            
-            # Yangi proxy bilan qayta urinish (1 marta)
-            session2 = get_session()
-            headers['User-Agent'] = ua.random
-            res2 = session2.get(url, headers=headers, timeout=10)
-            res2.raise_for_status()
-            title = _extract_yandex_title_from_html(res2.content)
-            
-            if not title or _is_junk_title(title):
-                print(f"JUNK still detected after retry: '{title}'")
-                # URL dan qo'shiq nomini regex orqali ajratib olishga harakat qilamiz
-                title = _extract_from_url_path(url)
-                if not title:
-                    return ""
+            return ""
         
         # Remove common zero-width or formatting chars
         title = title.replace('\u200e', '').replace('\xa0', ' ')
