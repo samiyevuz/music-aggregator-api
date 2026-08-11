@@ -237,6 +237,9 @@ def _extract_from_url_path(url: str) -> str:
             elif title:
                 return title
     except Exception as e:
+        print(f"Yandex API fallback error: {e}")
+    return ""
+
 def search_and_get_audio_url(search_query: str):
     # Keshda bor bo'lsa, darhol qaytarish (5 daqiqa ichida)
     if search_query in audio_cache:
