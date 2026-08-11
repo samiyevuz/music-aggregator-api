@@ -137,7 +137,17 @@ def _extract_yandex_title_from_html(html_content: bytes) -> str:
     # 2. <title> tegi
     if soup.title and soup.title.text:
         return soup.title.text.strip()
-    
+        
+    # 3. Regex fallback (for React SSR strings)
+    try:
+        html_str = html_content.decode('utf-8', 'ignore')
+        import re
+        m1 = re.search(r'\"property\":\"og:title\",\"content\":\"([^\"]+)\"', html_str)
+        if m1:
+            return m1.group(1).split('—')[0].strip()
+    except Exception:
+        pass
+        
     return ""
 
 @cached(cache=url_cache)
