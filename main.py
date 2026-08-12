@@ -36,11 +36,8 @@ ua = UserAgent(fallback='Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
 
 # Proxy Generator
 def get_random_proxy():
-    import random
-    # Har bir so'rovda yangi IP olish uchun tasodifiy sessiya ID yaratamiz (8 xonali son)
-    session_id = random.randint(10000000, 99999999)
-    # ttl-15 orqali IP o'zini 15 daqiqa saqlab turadi, lekin har safar yangi session_id chaqirilganda yangi IP beriladi
-    proxy = f"http://REeRXlovbZw8qA9:rB32ciO4SfzVl6Z_session-{session_id}_ttl-15@thehub.proxy-cheap.com:8080"
+    # Premium proxy o'lib qolgan, shuning uchun ishlayotgan bepul proxy
+    proxy = "http://178.18.207.85:8888"
     return proxy
 
 # Session with fast retry for requests
@@ -300,6 +297,14 @@ def search_and_get_audio_url(search_query: str, is_yandex: bool = False):
 
 @app.get("/download", response_model=DownloadResponse)
 def download_music(url: str):
+    import urllib.parse
+    import re
+    url = urllib.parse.unquote(url)
+    if url.startswith("intent://"):
+        match = re.search(r'https?://[^\s;]+', url)
+        if match:
+            url = match.group(0)
+
     if not url.startswith("http"):
         raise HTTPException(status_code=400, detail="Invalid URL format. Please provide a valid Yandex, Spotify, or Apple Music link.")
 
