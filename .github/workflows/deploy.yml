@@ -1,0 +1,40 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: SSH and Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: "${{ secrets.SSH_HOST }}"
+          username: "${{ secrets.SSH_USER }}"
+          password: "${{ secrets.SSH_PASSWORD }}"
+          port: 22
+          script: |
+            cd /opt/music_api
+            git config --global --add safe.directory /opt/music_api
+            git fetch origin
+            git reset --hard origin/$(git symbolic-ref --short -q HEAD || git rev-parse --abbrev-ref HEAD)
+            
+            # Install python requirements if present
+            if [ -f requirements.txt ]; then
+              ./venv/bin/pip install -r requirements.txt
+            fi
+            
+            # Install Node modules if present
+            if [ -f package.json ]; then
+              npm install --omit=dev
+            fi
+            
+            # Restart service
+            pm2 restart yt-mp3-api
