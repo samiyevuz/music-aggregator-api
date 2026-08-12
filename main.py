@@ -154,31 +154,32 @@ def _extract_yandex_title_from_html(html_content: bytes) -> str:
 def scrape_title_from_url(url: str) -> str:
     try:
         is_yandex = 'yandex' in url.lower()
-        # Proxy faqat Yandex uchun kerak (SmartCaptcha), Spotify/Apple to'g'ridan-to'g'ri ishlaydi
+        is_spotify = 'spotify' in url.lower()
+        
         session = get_session(use_proxy=is_yandex)
         headers = {
             'User-Agent': ua.random,
             'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         }
+        
+        # OEmbed-ni birinchi sinash (IP ban/Timeout oldini olish)
+        if is_spotify:
+            try:
+                oembed_url = f"https://open.spotify.com/oembed?url={url}"
+                oembed_res = session.get(oembed_url, timeout=5)
+                if oembed_res.status_code == 200:
+                    title = oembed_res.json().get('title', '')
+                    if title: return title
+            except Exception as e:
+                print(f"OEmbed error: {e}")
+        
+        # OEmbed yordam bermasa yoki boshqa platforma bo'lsa asosiy request
         res = session.get(url, headers=headers, timeout=10)
         res.raise_for_status()
         
         if is_yandex:
             title = _extract_yandex_title_from_html(res.content)
-        elif 'spotify' in url.lower():
-            try:
-                # OEmbed orqali olish (HTML scraping bloklanishiga qarshi)
-                oembed_url = f"https://open.spotify.com/oembed?url={url}"
-                oembed_res = session.get(oembed_url, timeout=5)
-                if oembed_res.status_code == 200:
-                    title = oembed_res.json().get('title', '')
-                else:
-                    soup = BeautifulSoup(res.content, 'html.parser')
-                    title = soup.title.text if soup.title else ""
-            except Exception:
-                soup = BeautifulSoup(res.content, 'html.parser')
-                title = soup.title.text if soup.title else ""
         else:
             soup = BeautifulSoup(res.content, 'html.parser')
             title = soup.title.text if soup.title else ""
