@@ -100,7 +100,14 @@ def _is_junk_title(title: str) -> bool:
     """Yandex proxy orqali olingan reklama/promo sahifalarini aniqlash"""
     if not title:
         return True
-    return bool(JUNK_RE.search(title))
+    if bool(JUNK_RE.search(title)):
+        return True
+    t_lower = title.lower()
+    if 'янд' in t_lower and 'музык' in t_lower and 'собираем' in t_lower:
+        return True
+    if title.strip().lower() in ['яндекс музыка', 'yandex music', 'yandex.music', 'яндекс.музыка']:
+        return True
+    return False
 
 def _extract_yandex_title_from_html(html_content: bytes) -> str:
     """Yandex Music sahifasidan title ni chiqarib olish — ld+json, og:title va meta teglardan"""
@@ -198,6 +205,9 @@ def scrape_title_from_url(url: str) -> str:
         title = re.sub(r'Yandex Music ilovasida.*', '', title, flags=re.IGNORECASE)
         title = re.sub(r'Listen online on Yandex Music.*', '', title, flags=re.IGNORECASE)
         title = re.sub(r'Слушать онлайн на Яндекс.*', '', title, flags=re.IGNORECASE)
+        title = re.sub(r'Слушать в Яндекс Музыке.*', '', title, flags=re.IGNORECASE)
+        title = re.sub(r'— слушать онлайн на Яндекс Музыке.*', '', title, flags=re.IGNORECASE)
+        title = title.replace('Яндекс Музыка', '').replace('Yandex Music', '').strip()
         
         # 2. Apple Music 
         title = re.sub(r'—\s*Apple\s*Music.*', '', title, flags=re.IGNORECASE)
@@ -226,7 +236,8 @@ def _extract_from_url_path(url: str) -> str:
     try:
         api_url = f"https://music.yandex.ru/handlers/track.jsx?track={track_id}:{album_id}"
         headers = {'User-Agent': ua.random, 'Accept': 'application/json'}
-        r = requests.get(api_url, headers=headers, timeout=8)
+        session = get_session(use_proxy=True)
+        r = session.get(api_url, headers=headers, timeout=8)
         if r.status_code == 200:
             data = r.json()
             track = data.get('track', {})
